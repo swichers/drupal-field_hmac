@@ -1,0 +1,144 @@
+<?php
+/**
+ * @file
+ * Drupal hook implementations.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function field_hmac_permission() {
+
+  return array(
+    'edit hmac settings' => array(
+      'title' => t('Edit HMAC settings'),
+      'description' => t('Allows users to edit the HMAC settings on node types.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_entity_property_info().
+ */
+function field_hmac_entity_property_info_alter(&$info) {
+
+  $properties = &$info['node']['properties'];
+
+  $properties['hmac'] = array(
+    'label' => t('HMAC'),
+    'description' => t('The hash value for the selected field.'),
+    'type' => 'text',
+    'getter callback' => 'field_hmac_get_field_hmac_callback',
+    'computed' => TRUE,
+    'entity views field' => TRUE,
+  );
+}
+
+/**
+ * Callback for getting a field hash as a property.
+ */
+function field_hmac_get_field_hmac_callback($node, array $options, $name, $type, $info) {
+
+  $variable_prefix = 'field_hmac_' . $node->type;
+
+  if (!variable_get($variable_prefix . '_enabled', FALSE)) {
+
+    return;
+  }
+
+  $field = variable_get($variable_prefix . '_hmac_field', '');
+  if (empty($field)) {
+
+    return;
+  }
+
+  try {
+
+    $hmac = drupal_hmac_base64($info['parent']->{$field}->value(), variable_get($variable_prefix . '_secret_key', ''));
+  }
+  catch (Exception $x) {
+
+    watchdog_exception('field_hmac', $x);
+  }
+
+  return $hmac;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
+
+  $variable_prefix = 'field_hmac_' . $form['#node_type']->type;
+
+  $fields = field_info_instances('node', $form['#node_type']->type);
+  $field_options = array();
+  foreach ($fields as $name => $field) {
+
+    $field_options[$name] = $field['label'];
+  }
+
+  $form['field_hmac'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Field HMAC'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => TRUE,
+    '#group' => 'additional_settings',
+    '#access' => !empty($field_options) && user_access('edit hmac settings'),
+  );
+
+  $form['field_hmac']['enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable the HMAC hash for this content type.'),
+    '#description' => t('Check to enable the HMAC hash property.'),
+    '#return_value' => TRUE,
+    '#default_value' => variable_get($variable_prefix . '_enabled', FALSE),
+  );
+
+  $shared_state_option = array(
+    ':input#edit-field-hmac-enabled' => array('checked' => TRUE),
+  );
+  $shared_states = array(
+    'visible' => $shared_state_option,
+    'required' => $shared_state_option,
+    'enabled' => $shared_state_option,
+    'readonly' => $shared_state_option,
+  );
+
+  $form['field_hmac']['hmac_field'] = array(
+    '#type' => 'select',
+    '#title' => t('HMAC source field'),
+    '#description' => t('The field to use when creating the HMAC.'),
+    '#empty_option' => t('Select a field'),
+    '#options' => $field_options,
+    '#default_value' => variable_get($variable_prefix . '_hmac_field', ''),
+    '#states' => $shared_states,
+  );
+
+  $form['field_hmac']['secret_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Secret key'),
+    '#description' => t('The secret key to use when creating the HMAC.'),
+    '#default_value' => variable_get($variable_prefix . '_secret_key', ''),
+    '#states' => $shared_states,
+  );
+
+  $form['#submit'][] = 'field_hmac_form_node_type_form_submit';
+}
+
+/**
+ * Submit handler for the node type form.
+ */
+function field_hmac_form_node_type_form_submit($form, &$form_state) {
+
+  $hmac_settings = $form_state['values']['field_hmac'];
+  $variable_prefix = 'field_hmac_' . $form_state['values']['type'];
+
+  variable_set($variable_prefix . '_enabled', $hmac_settings['enabled']);
+  variable_set($variable_prefix . '_hmac_field', $hmac_settings['hmac_field']);
+  variable_set($variable_prefix . '_secret_key', $hmac_settings['secret_key']);
+
+  variable_del($variable_prefix);
+}

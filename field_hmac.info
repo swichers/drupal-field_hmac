@@ -1,0 +1,5 @@
+name = Field HMAC
+description = Provides a hashed property on entities for a configured field.
+core = 7.x
+version = 0.1
+dependency[] = entity
