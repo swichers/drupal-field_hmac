@@ -19,7 +19,7 @@ function field_hmac_permission() {
 }
 
 /**
- * Implements hook_entity_property_info().
+ * Implements hook_entity_property_info_alter().
  */
 function field_hmac_entity_property_info_alter(&$info) {
 
