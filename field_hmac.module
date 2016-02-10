@@ -27,7 +27,7 @@ function field_hmac_entity_property_info_alter(&$info) {
 
   $properties['hmac'] = array(
     'label' => t('HMAC'),
-    'description' => t('The hash value for the selected field.'),
+    'description' => t('The entity Hash Message Authentication Code.'),
     'type' => 'text',
     'getter callback' => 'field_hmac_get_field_hmac_callback',
     'computed' => TRUE,
@@ -78,6 +78,7 @@ function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
   $form['field_hmac'] = array(
     '#type' => 'fieldset',
     '#title' => t('Field HMAC'),
+    '#description' => '<p>' . t('Configure the Hash Message Authentication Code settings.') . '</p>',
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#tree' => TRUE,
@@ -119,7 +120,7 @@ function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
   $form['field_hmac']['secret_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Secret key'),
-    '#description' => t('The secret key to use when creating the HMAC.'),
+    '#description' => t('The secret key to use when creating the HMAC. This should not be publicly shared.'),
     '#default_value' => variable_get($variable_prefix . '_secret_key', ''),
     '#states' => $shared_states,
   );
