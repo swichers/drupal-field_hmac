@@ -72,12 +72,8 @@ function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
 
   $variable_prefix = 'field_hmac_' . $form['#node_type']->type;
 
-  $fields = field_info_instances('node', $form['#node_type']->type);
-  $field_options = array();
-  foreach ($fields as $name => $field) {
-
-    $field_options[$name] = $field['label'];
-  }
+  $fields = field_hmac_get_entity_type_fields('node', $form['#node_type']->type);
+  $properties = field_hmac_get_entity_type_properties('node');
 
   $form['field_hmac'] = array(
     '#type' => 'fieldset',
@@ -86,7 +82,7 @@ function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
     '#collapsed' => TRUE,
     '#tree' => TRUE,
     '#group' => 'additional_settings',
-    '#access' => !empty($field_options) && user_access('edit hmac settings'),
+    '#access' => ($fields || $properties) && user_access('edit hmac settings'),
   );
 
   $form['field_hmac']['enabled'] = array(
@@ -109,10 +105,13 @@ function field_hmac_form_node_type_form_alter(&$form, &$form_state) {
 
   $form['field_hmac']['hmac_field'] = array(
     '#type' => 'select',
-    '#title' => t('HMAC source field'),
-    '#description' => t('The field to use when creating the HMAC.'),
-    '#empty_option' => t('Select a field'),
-    '#options' => $field_options,
+    '#title' => t('HMAC source field or property'),
+    '#description' => t('The field or property to use when creating the HMAC.'),
+    '#empty_option' => t('Select an option'),
+    '#options' => array(
+      t('Fields') => $fields,
+      t('Properties') => $properties,
+    ),
     '#default_value' => variable_get($variable_prefix . '_hmac_field', ''),
     '#states' => $shared_states,
   );
@@ -140,5 +139,56 @@ function field_hmac_form_node_type_form_submit($form, &$form_state) {
   variable_set($variable_prefix . '_hmac_field', $hmac_settings['hmac_field']);
   variable_set($variable_prefix . '_secret_key', $hmac_settings['secret_key']);
 
+  // Clean up the fieldset getting saved to the database.
   variable_del($variable_prefix);
+}
+
+/**
+ * Get the fields on an entity and bundle.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param string $bundle
+ *   The entity bundle.
+ *
+ * @return array
+ *   The fields on the entity/bundle combination.
+ */
+function field_hmac_get_entity_type_fields($entity_type, $bundle) {
+
+  $fields = field_info_instances($entity_type, $bundle);
+  $field_options = array();
+  if (!empty($fields)) {
+
+    foreach ($fields as $name => $field) {
+
+      $field_options[$name] = $field['label'];
+    }
+  }
+
+  return $field_options;
+}
+
+/**
+ * Get the properties for an entity.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ *
+ * @return array
+ *   The properties of the entity type.
+ */
+function field_hmac_get_entity_type_properties($entity_type) {
+
+  $property_info = entity_get_property_info($entity_type);
+  $properties = array();
+  if (!empty($property_info['properties'])) {
+
+    foreach ($property_info['properties'] as $name => $info) {
+
+      $properties[$name] = $info['label'];
+    }
+  }
+
+  return $properties;
 }
