@@ -19,7 +19,10 @@ on entities (and in Views) that contains the HMAC.
 <?php
   // Assumes HMAC has been configured.
   $wrapper = entity_metadata_wrapper('node', 123);
-  $wrapper->hmac->value();
+  $hmac = $wrapper->hmac->value();
+
+  // Do something/validate with HMAC.
+  dpm($hmac);
 ?>
 
 # See other
