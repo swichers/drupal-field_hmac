@@ -16,6 +16,7 @@ on entities (and in Views) that contains the HMAC.
 
 # Example usage
 
+```php
 <?php
   // Assumes HMAC has been configured.
   $wrapper = entity_metadata_wrapper('node', 123);
@@ -24,6 +25,7 @@ on entities (and in Views) that contains the HMAC.
   // Do something/validate with HMAC.
   dpm($hmac);
 ?>
+```
 
 # See other
 
